@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="読みたい本・読書中・読了した本の一覧">
+    <title>{{ page_title }} - 積読リスト</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% if logged_in %}
+      <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+    {% endif %}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-top">
+        <a class="site-name" href="{{ url_for('index') }}">積読リスト</a>
+        <div class="account-menu">
+          {% if logged_in %}
+            <span>{{ admin_user }}でログイン中</span>
+            <form action="{{ url_for('logout') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="header-button" type="submit">ログアウト</button>
+            </form>
+          {% elif registration_open %}
+            <a class="header-register-link" href="{{ url_for('register') }}">管理ユーザー登録</a>
+          {% else %}
+            <a href="{{ url_for('login') }}">ログイン</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <nav class="container view-tabs" aria-label="本の一覧">
+        {% for view_name, view in views.items() %}
+          <a
+            href="{{ url_for(view.endpoint) }}"
+            class="{% if current_view == view_name %}active{% endif %}"
+            {% if current_view == view_name %}aria-current="page"{% endif %}
+          >{{ view.label }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="container page-content">
+      <div class="content-heading">
+        <h1>{{ page_title }}</h1>
+        <span class="book-count">{{ books|length }}冊</span>
+      </div>
+
+      {% if logged_in %}
+        <section class="add-panel" aria-labelledby="add-book-heading">
+          <h2 id="add-book-heading">本を追加</h2>
+
+          {% if errors %}
+            <div class="error-box" role="alert">
+              <p>入力内容を確認してください。</p>
+              <ul>
+                {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <form class="add-form" action="{{ url_for('create_book') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="view" value="{{ current_view }}">
+
+            <div class="field field-title">
+              <label for="title">タイトル <span>必須</span></label>
+              <input id="title" name="title" type="text" maxlength="200" required value="{{ form.get('title', '') }}">
+            </div>
+
+            <div class="field">
+              <label for="author">著者</label>
+              <input id="author" name="author" type="text" maxlength="200" value="{{ form.get('author', '') }}">
+            </div>
+
+            <div class="field field-status">
+              <label for="status">状態</label>
+              <select id="status" name="status">
+                {% for value, label in status_labels.items() %}
+                  <option value="{{ value }}" {% if form.get('status', default_status) == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="cover">表紙ファイル名</label>
+              <input id="cover" name="cover" type="text" maxlength="255" placeholder="sample.webp" value="{{ form.get('cover', '') }}">
+            </div>
+
+            <button class="primary-button" type="submit">追加</button>
+          </form>
+          <p class="field-note">表紙は <code>static/covers/</code> に置いたWebPのファイル名を入力します。</p>
+        </section>
+      {% endif %}
+
+      <section class="table-panel" aria-label="{{ page_title }}の一覧">
+        <div class="table-scroll">
+          <table class="book-table">
+            <thead>
+              <tr>
+                <th class="cover-column" scope="col">表紙</th>
+                <th scope="col">タイトル</th>
+                <th scope="col">著者</th>
+                <th class="status-column" scope="col">状態</th>
+                {% if logged_in %}<th class="action-column" scope="col">操作</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for book in books %}
+                <tr>
+                  <td class="cover-cell">
+                    {% if cover_exists(book.cover) %}
+                      <img
+                        src="{{ url_for('static', filename='covers/' ~ book.cover) }}"
+                        alt="『{{ book.title }}』の表紙"
+                        width="56"
+                        height="84"
+                        loading="{{ 'eager' if loop.first else 'lazy' }}"
+                        decoding="async"
+                      >
+                    {% else %}
+                      <span class="cover-placeholder" aria-label="表紙なし">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="title-cell">
+                    {{ book.title }}
+                    {% if logged_in and book.cover and not cover_exists(book.cover) %}
+                      <div class="missing-cover">表紙未検出: {{ book.cover }}</div>
+                    {% endif %}
+                  </td>
+                  <td>{{ book.author or '—' }}</td>
+                  <td>
+                    {% if logged_in %}
+                      <form action="{{ url_for('update_book_status', book_id=book.id) }}" method="post" data-auto-submit>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="view" value="{{ current_view }}">
+                        <label class="sr-only" for="status-{{ book.id }}">{{ book.title }}の状態</label>
+                        <select id="status-{{ book.id }}" name="status" class="status-select status-{{ book.status }}">
+                          {% for value, label in status_labels.items() %}
+                            <option value="{{ value }}" {% if book.status == value %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                        <noscript><button class="small-button" type="submit">変更</button></noscript>
+                      </form>
+                    {% else %}
+                      <span class="status-label status-{{ book.status }}">{{ status_labels[book.status] }}</span>
+                    {% endif %}
+                  </td>
+                  {% if logged_in %}
+                    <td>
+                      <form action="{{ url_for('delete_book', book_id=book.id) }}" method="post" data-confirm="この本を削除しますか？">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="view" value="{{ current_view }}">
+                        <button class="delete-button" type="submit">削除</button>
+                      </form>
+                    </td>
+                  {% endif %}
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="empty-row" colspan="{{ 5 if logged_in else 4 }}">該当する本はありません。</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

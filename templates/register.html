@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>管理ユーザー登録 - 積読リスト</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="site-header login-header">
+      <div class="container header-top">
+        <a class="site-name" href="{{ url_for('index') }}">積読リスト</a>
+        <a class="back-link" href="{{ url_for('index') }}">一覧へ戻る</a>
+      </div>
+    </header>
+
+    <main class="container page-content">
+      <section class="login-panel">
+        <h1>管理ユーザー登録</h1>
+        <p class="form-description">本の追加や編集に使うIDとパスワードを登録します。</p>
+
+        <div class="auth-switch auth-switch-top">
+          <span>すでに登録済みですか？</span>
+          <a class="secondary-link" href="{{ url_for('login') }}">ログインへ</a>
+        </div>
+
+        {% if errors %}
+          <div class="error-box" role="alert">
+            <ul>
+              {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form class="login-form" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <label for="user">ID</label>
+          <input id="user" name="user" type="text" maxlength="100" autocomplete="username" required autofocus value="{{ form.get('user', '') }}">
+
+          <label for="password">パスワード</label>
+          <input id="password" name="password" type="password" minlength="8" maxlength="200" autocomplete="new-password" required>
+
+          <label for="password-confirmation">パスワード（確認）</label>
+          <input id="password-confirmation" name="password_confirmation" type="password" minlength="8" maxlength="200" autocomplete="new-password" required>
+
+          <button class="primary-button" type="submit">登録してログイン</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
