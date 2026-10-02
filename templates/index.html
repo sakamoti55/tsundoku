@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="読みたい本・読書中・読了した本の一覧">
     <title>{{ page_title }} - 積読リスト</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=asset_version('style.css')) }}">
     {% if logged_in %}
-      <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+      <script src="{{ url_for('static', filename='app.js', v=asset_version('app.js')) }}" defer></script>
     {% endif %}
   </head>
   <body>

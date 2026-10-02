@@ -303,6 +303,14 @@ def csrf_token():
     return token
 
 
+def asset_version(filename):
+    asset_path = Path(app.static_folder) / filename
+    try:
+        return asset_path.stat().st_mtime_ns
+    except OSError:
+        return 1
+
+
 @app.before_request
 def protect_post_requests():
     if request.method != "POST":
@@ -318,6 +326,14 @@ def protect_post_requests():
 app.jinja_env.globals["status_labels"] = STATUS_LABELS
 app.jinja_env.globals["cover_exists"] = cover_exists
 app.jinja_env.globals["csrf_token"] = csrf_token
+app.jinja_env.globals["asset_version"] = asset_version
+
+
+@app.after_request
+def prevent_html_caching(response):
+    if response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def normalize_view(view_name):
