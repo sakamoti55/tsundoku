@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   --ink: #1f292d;
-  --muted: #68777c;
+  --muted: #53656a;
   --page: #f3f6f6;
   --surface: #fff;
   --header: #315f63;
@@ -70,7 +70,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .account-menu form {
@@ -112,9 +112,10 @@ a {
 .view-tabs a {
   flex: 0 0 auto;
   padding: 10px 14px 9px;
-  color: rgb(255 255 255 / 78%);
+  color: rgb(255 255 255 / 88%);
   border-bottom: 3px solid transparent;
   font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -187,9 +188,32 @@ h2 {
 
 .add-form {
   display: grid;
-  grid-template-columns: minmax(190px, 2fr) minmax(150px, 1fr) 145px minmax(150px, 1fr) auto;
+  grid-template-areas:
+    "title author status"
+    "cover cover action";
+  grid-template-columns: minmax(240px, 1.7fr) minmax(190px, 1.2fr) minmax(150px, 0.7fr);
   align-items: end;
   gap: 12px;
+}
+
+.field-title {
+  grid-area: title;
+}
+
+.field-author {
+  grid-area: author;
+}
+
+.field-status {
+  grid-area: status;
+}
+
+.field-cover {
+  grid-area: cover;
+}
+
+.add-button {
+  grid-area: action;
 }
 
 .field {
@@ -199,7 +223,7 @@ h2 {
 
 .field label,
 .login-form label {
-  color: #46555a;
+  color: #35494e;
   font-size: 12px;
   font-weight: 700;
 }
@@ -269,25 +293,56 @@ a:focus-visible {
 }
 
 .file-input {
-  padding: 4px;
-  color: var(--muted);
-  font-size: 11px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
-.file-input::file-selector-button {
-  margin-right: 8px;
-  padding: 6px 9px;
-  color: var(--accent);
+.file-picker {
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+}
+
+.file-button {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  color: var(--accent) !important;
   background: var(--accent-soft);
-  border: 0;
   border-radius: 4px;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.file-input::file-selector-button:hover {
-  color: #fff;
+.file-button:hover {
+  color: #fff !important;
   background: var(--accent);
+}
+
+.file-input:focus-visible + .file-button {
+  outline: 3px solid rgb(103 177 182 / 40%);
+  outline-offset: 1px;
+}
+
+.file-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .upload-preview {
@@ -406,7 +461,7 @@ a:focus-visible {
 }
 
 .book-table th {
-  color: #536267;
+  color: #3e5156;
   background: #edf2f2;
   font-size: 11px;
   font-weight: 700;
@@ -525,7 +580,7 @@ a:focus-visible {
 
 .empty-row {
   height: 120px;
-  color: var(--muted);
+  color: #53656a;
   text-align: center !important;
 }
 
@@ -571,14 +626,15 @@ a:focus-visible {
 
 @media (max-width: 860px) {
   .add-form {
+    grid-template-areas:
+      "title title"
+      "author status"
+      "cover cover"
+      "action action";
     grid-template-columns: 1fr 1fr;
   }
 
-  .field-title {
-    grid-column: 1 / -1;
-  }
-
-  .primary-button {
+  .add-button {
     width: 100%;
   }
 }
@@ -605,11 +661,13 @@ a:focus-visible {
   }
 
   .add-form {
+    grid-template-areas:
+      "title"
+      "author"
+      "status"
+      "cover"
+      "action";
     grid-template-columns: 1fr;
-  }
-
-  .field-title {
-    grid-column: auto;
   }
 
   .book-table {

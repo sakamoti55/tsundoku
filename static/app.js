@@ -19,9 +19,10 @@ document.querySelectorAll("form[data-confirm]").forEach((form) => {
 });
 
 document.querySelectorAll("[data-image-input]").forEach((input) => {
-  const preview = input.parentElement.querySelector("[data-image-preview]");
+  const field = input.closest(".field");
+  const preview = field?.querySelector("[data-image-preview]");
   const image = preview?.querySelector("img");
-  const fileName = preview?.querySelector("[data-file-name]");
+  const fileName = field?.querySelector("[data-file-name]");
   let previewUrl;
 
   input.addEventListener("change", () => {
@@ -33,6 +34,7 @@ document.querySelectorAll("[data-image-input]").forEach((input) => {
     const file = input.files?.[0];
     if (!file || !preview || !image || !fileName) {
       if (preview) preview.hidden = true;
+      if (fileName) fileName.textContent = "選択されていません";
       return;
     }
 

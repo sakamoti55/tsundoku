@@ -22,7 +22,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 
 STATUS_LABELS = {
-    "want_to_read": "これから読みたい",
+    "want_to_read": "読みたい",
     "reading": "読書中",
     "finished": "読了",
 }
@@ -42,8 +42,8 @@ VIEWS = {
     },
     "want_to_read": {
         "endpoint": "want_to_read_books",
-        "label": "これから読みたい",
-        "title": "これから読みたい本",
+        "label": "読みたい",
+        "title": "読みたい本",
         "status": "want_to_read",
     },
     "finished": {
