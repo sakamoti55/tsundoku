@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import secrets
 import sqlite3
+from uuid import uuid4
+import warnings
 
 from flask import (
     Flask,
@@ -15,6 +17,7 @@ from flask import (
     session,
     url_for,
 )
+from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -96,8 +99,10 @@ app.config.from_mapping(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_NAME="tsundoku_session",
     SESSION_COOKIE_SECURE=os.environ.get("TSUNDOKU_COOKIE_SECURE") == "1",
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
 )
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+Path(app.static_folder, "covers").mkdir(parents=True, exist_ok=True)
 
 
 def get_db():
@@ -206,16 +211,51 @@ def get_books(status_filter=None):
     return get_db().execute(sql, parameters).fetchall()
 
 
-def validate_cover(filename):
-    if not filename:
-        return None
-    if Path(filename).name != filename or "\\" in filename:
-        return "表紙はファイル名だけを入力してください。"
-    if not filename.lower().endswith(".webp"):
-        return "表紙はWebPファイルを指定してください。"
-    if len(filename) > 255:
-        return "表紙ファイル名は255文字以内で入力してください。"
-    return None
+def save_cover(upload):
+    if upload is None or not upload.filename:
+        return "", None
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(upload.stream) as source:
+                if source.format not in {"JPEG", "PNG", "WEBP"}:
+                    return "", "表紙はJPEG、PNG、WebPのいずれかを選択してください。"
+
+                image = ImageOps.exif_transpose(source)
+                image.load()
+                image.thumbnail((320, 480), Image.Resampling.LANCZOS)
+
+                has_alpha = image.mode in {"RGBA", "LA"} or (
+                    image.mode == "P" and "transparency" in image.info
+                )
+                image = image.convert("RGBA" if has_alpha else "RGB")
+                filename = f"{uuid4().hex}.webp"
+                destination = Path(app.static_folder) / "covers" / filename
+                image.save(destination, "WEBP", quality=82, method=6)
+                return filename, None
+    except (
+        Image.DecompressionBombError,
+        Image.DecompressionBombWarning,
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+    ):
+        return "", "画像を読み込めませんでした。別の画像を選択してください。"
+
+
+def remove_cover_if_unused(filename):
+    if not filename or Path(filename).name != filename:
+        return
+    if get_db().execute(
+        "SELECT 1 FROM books WHERE cover = ? LIMIT 1", (filename,)
+    ).fetchone():
+        return
+
+    try:
+        (Path(app.static_folder) / "covers" / filename).unlink(missing_ok=True)
+    except OSError:
+        app.logger.warning("Could not remove unused cover: %s", filename)
 
 
 def cover_exists(filename):
@@ -309,6 +349,16 @@ def render_books(view_name="all", errors=None, form=None, status_code=200):
         ),
         status_code,
     )
+
+
+@app.errorhandler(413)
+def upload_too_large(_error):
+    if is_logged_in():
+        return render_books(
+            errors=["画像は8MB以下のファイルを選択してください。"],
+            status_code=413,
+        )
+    return "画像は8MB以下のファイルを選択してください。", 413
 
 
 @app.get("/")
@@ -441,7 +491,6 @@ def create_book():
         "title": request.form.get("title", "").strip(),
         "author": request.form.get("author", "").strip(),
         "status": request.form.get("status", "want_to_read"),
-        "cover": request.form.get("cover", "").strip(),
     }
     errors = []
 
@@ -454,7 +503,10 @@ def create_book():
     if form["status"] not in STATUS_LABELS:
         errors.append("正しい状態を選択してください。")
 
-    cover_error = validate_cover(form["cover"])
+    cover_filename = ""
+    cover_error = None
+    if not errors:
+        cover_filename, cover_error = save_cover(request.files.get("cover"))
     if cover_error:
         errors.append(cover_error)
 
@@ -467,11 +519,16 @@ def create_book():
         )
 
     db = get_db()
-    db.execute(
-        "INSERT INTO books (title, author, status, cover) VALUES (?, ?, ?, ?)",
-        (form["title"], form["author"], form["status"], form["cover"]),
-    )
-    db.commit()
+    try:
+        db.execute(
+            "INSERT INTO books (title, author, status, cover) VALUES (?, ?, ?, ?)",
+            (form["title"], form["author"], form["status"], cover_filename),
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        remove_cover_if_unused(cover_filename)
+        raise
     return redirect_to_view(view_name)
 
 
@@ -501,10 +558,13 @@ def update_book_status(book_id):
 @login_required
 def delete_book(book_id):
     db = get_db()
+    book = db.execute("SELECT cover FROM books WHERE id = ?", (book_id,)).fetchone()
+    if book is None:
+        abort(404)
     result = db.execute("DELETE FROM books WHERE id = ?", (book_id,))
     db.commit()
-    if result.rowcount == 0:
-        abort(404)
+    if result.rowcount:
+        remove_cover_if_unused(book["cover"])
     return redirect_to_view(request.form.get("view", "all"))
 
 

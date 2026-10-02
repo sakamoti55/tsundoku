@@ -59,7 +59,7 @@
             </div>
           {% endif %}
 
-          <form class="add-form" action="{{ url_for('create_book') }}" method="post">
+          <form class="add-form" action="{{ url_for('create_book') }}" method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="view" value="{{ current_view }}">
 
@@ -83,13 +83,24 @@
             </div>
 
             <div class="field">
-              <label for="cover">表紙ファイル名</label>
-              <input id="cover" name="cover" type="text" maxlength="255" placeholder="sample.webp" value="{{ form.get('cover', '') }}">
+              <label for="cover">表紙画像</label>
+              <input
+                class="file-input"
+                id="cover"
+                name="cover"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                data-image-input
+              >
+              <div class="upload-preview" data-image-preview hidden>
+                <img src="" alt="選択した表紙のプレビュー" width="40" height="60">
+                <span data-file-name></span>
+              </div>
             </div>
 
             <button class="primary-button" type="submit">追加</button>
           </form>
-          <p class="field-note">表紙は <code>static/covers/</code> に置いたWebPのファイル名を入力します。</p>
+          <p class="field-note">JPEG・PNG・WebPに対応。最大320×480pxのWebPへ自動変換します（最大8MB）。</p>
         </section>
       {% endif %}
 

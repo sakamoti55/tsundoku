@@ -268,6 +268,60 @@ a:focus-visible {
   border-radius: 3px;
 }
 
+.file-input {
+  padding: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.file-input::file-selector-button {
+  margin-right: 8px;
+  padding: 6px 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 0;
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-input::file-selector-button:hover {
+  color: #fff;
+  background: var(--accent);
+}
+
+.upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px;
+  background: #f5f8f8;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.upload-preview[hidden] {
+  display: none;
+}
+
+.upload-preview img {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.upload-preview span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .error-box {
   margin-bottom: 14px;
   padding: 10px 12px;
